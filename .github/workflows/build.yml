@@ -1,0 +1,29 @@
+name: build
+run-name: build, test, lint
+
+on: [push, pull_request]
+
+jobs:
+
+  build:
+    name: build, test, lint
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+    - run: rustup update
+    - run: cargo fmt --all --check
+    - run: cargo build
+    - run: cargo test
+    - run: cargo clippy
+
+  # single stable check for CI
+  workflow-pass:
+    name: Workflow Pass
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: always()
+    steps:
+      - run: |
+          if [ "${{ contains(needs.*.result, 'failure') }}" = "true" ]; then
+            exit 1
+          fi
