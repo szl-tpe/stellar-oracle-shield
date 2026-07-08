@@ -7,6 +7,10 @@ on:
 
 jobs:
   release:
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
     uses: stellar-expert/soroban-build-workflow/.github/workflows/release.yml@v25.1.0
     with:
       release_name: ${{ github.ref_name }}
@@ -14,3 +18,11 @@ jobs:
       package: 'stellar-oracle-shield'
     secrets:
       release_token: ${{ secrets.GITHUB_TOKEN }}
+
+  typescript-sdk:
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/typescript-sdk.yml
+    with:
+      version: ${{ github.ref_name }}
