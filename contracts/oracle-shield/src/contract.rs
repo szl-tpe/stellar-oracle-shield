@@ -11,6 +11,7 @@ contractmeta!(key = "Description", val = "sunzu lab oracle shield");
 #[contracttype]
 enum DataKey {
     Admin,
+    TTL,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -25,9 +26,24 @@ pub struct Contract;
 impl Contract {
     /// initialze contract
     /// set administator address
-    pub fn __constructor(env: Env, admin: Address) {
+    pub fn __constructor(env: Env, admin: Address, ttl: Option<u64>) {
+        const DEFAULT_TTL: u64 = 3600;
         admin.require_auth();
         env.storage().instance().set(&DataKey::Admin, &admin);
+        env.storage()
+            .instance()
+            .set(&DataKey::TTL, &ttl.unwrap_or(DEFAULT_TTL));
+    }
+
+    /// set ttl for a pairs score
+    /// `ttl` - u64 seconds
+    ///
+    /// restricted to admin
+    pub fn set_ttl(env: Env, ttl: u64) -> Result<(), Error> {
+        let admin = Self::get_admin(&env).ok_or(Error::MissingAdmin)?;
+        admin.require_auth();
+        env.storage().instance().set(&DataKey::TTL, &ttl);
+        Ok(())
     }
 
     fn get_admin(env: &Env) -> Option<Address> {
@@ -43,9 +59,10 @@ impl Contract {
     pub fn set_score(env: Env, base: Address, quote: Address, score: u32) -> Result<(), Error> {
         let admin = Self::get_admin(&env).ok_or(Error::MissingAdmin)?;
         admin.require_auth();
+
         let pair = Pair(base, quote);
         let old_score = Self::get_inner_score(&env, &pair);
-        let score = Score::new(score)?;
+        let score = Score::new(score, env.ledger().timestamp())?;
         env.storage().temporary().set(&pair, &score);
 
         if let Ok(old_score) = old_score {
@@ -62,11 +79,19 @@ impl Contract {
     }
 
     fn get_inner_score(env: &Env, pair: &Pair) -> Result<Score, Error> {
-        // todo - if stale - return StaleInput error
         env.storage()
             .temporary()
             .get(&pair)
             .ok_or(Error::PairNotCovered)
+            .and_then(|score: Score| {
+                let ttl: Option<u64> = env.storage().instance().get(&DataKey::TTL);
+                if let Some(ttl) = ttl {
+                    if env.ledger().timestamp() - score.ts > ttl {
+                        return Err(Error::StaleInput);
+                    }
+                }
+                Ok(score)
+            })
     }
 
     /// get score of a pair
