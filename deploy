@@ -29,7 +29,7 @@ if [ -z $source_account ]; then
     exit
 fi
 
-source_address=$(stellar keys address ${source_account})
+source_address=$(stellar keys public-key ${source_account})
 
 echo "${source_account}[${source_address}] deploys ${contract_name}"
 

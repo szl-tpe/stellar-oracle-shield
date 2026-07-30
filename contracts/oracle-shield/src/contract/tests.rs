@@ -73,7 +73,7 @@ fn test_set_score() {
     let base = usdc_circle_address(&env);
     let quote = xlm_address(&env);
 
-    client.set_score(&base, &quote, &12_i32);
+    client.set_score(&base, &quote, &12_u32);
     assert_eq!(
         env.auths(),
         [contract_auth_for(
@@ -81,15 +81,12 @@ fn test_set_score() {
             admin_address.clone(),
             contract_id.clone(),
             "set_score",
-            (base.clone(), quote.clone(), 12_i32,)
+            (base.clone(), quote.clone(), 12_u32,)
         )]
     );
     assert_eq!(client.get_score(&base, &quote), 12);
 
-    let ret = client.try_set_score(&base, &quote, &12345678_i32);
-    assert_eq!(ret, Err(Ok(Error::ScoreBounds)));
-
-    let ret = client.try_set_score(&base, &quote, &-2_i32);
+    let ret = client.try_set_score(&base, &quote, &12345678_u32);
     assert_eq!(ret, Err(Ok(Error::ScoreBounds)));
 }
 
@@ -112,7 +109,7 @@ fn test_get_score() {
     );
     assert!(env.auths().is_empty());
 
-    client.set_score(&base, &quote, &12_i32);
+    client.set_score(&base, &quote, &12_u32);
 
     assert_eq!(client.get_score(&base, &quote), 12);
     assert!(env.auths().is_empty());
@@ -142,22 +139,22 @@ fn test_get_status() {
     );
     assert!(env.auths().is_empty());
 
-    client.set_score(&base, &quote, &0_i32);
+    client.set_score(&base, &quote, &0_u32);
     assert_eq!(client.get_status(&base, &quote), Status::Unsafe);
 
-    client.set_score(&base, &quote, &32_i32);
+    client.set_score(&base, &quote, &32_u32);
     assert_eq!(client.get_status(&base, &quote), Status::Unsafe);
 
-    client.set_score(&base, &quote, &33_i32);
+    client.set_score(&base, &quote, &33_u32);
     assert_eq!(client.get_status(&base, &quote), Status::Degraded);
 
-    client.set_score(&base, &quote, &65_i32);
+    client.set_score(&base, &quote, &65_u32);
     assert_eq!(client.get_status(&base, &quote), Status::Degraded);
 
-    client.set_score(&base, &quote, &66_i32);
+    client.set_score(&base, &quote, &66_u32);
     assert_eq!(client.get_status(&base, &quote), Status::Healthy);
 
-    client.set_score(&base, &quote, &100_i32);
+    client.set_score(&base, &quote, &100_u32);
     assert_eq!(client.get_status(&base, &quote), Status::Healthy);
 
     assert_eq!(

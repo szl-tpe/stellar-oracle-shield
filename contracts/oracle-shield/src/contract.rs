@@ -1,6 +1,6 @@
 use {
     crate::{error::Error, score::Score, status::Status},
-    soroban_sdk::{contract, contractimpl, contractmeta, contracttype, Address, Env},
+    soroban_sdk::{Address, Env, contract, contractimpl, contractmeta, contracttype},
 };
 
 contractmeta!(key = "Description", val = "sunzu lab oracle shield");
@@ -35,7 +35,7 @@ impl Contract {
     /// `score` - [0-100] scoring. 0 the more unsafe, 100 the healthier
     ///
     /// restricted to admin
-    pub fn set_score(env: Env, base: Address, quote: Address, score: i32) -> Result<(), Error> {
+    pub fn set_score(env: Env, base: Address, quote: Address, score: u32) -> Result<(), Error> {
         let admin = Self::get_admin(&env).ok_or(Error::MissingAdmin)?;
         admin.require_auth();
         let score = Score::new(score)?;
@@ -62,7 +62,7 @@ impl Contract {
     /// fails if
     /// - pair is not covered
     /// - input for pair is stale (unreliable score)
-    pub fn get_score(env: Env, base: Address, quote: Address) -> Result<i32, Error> {
+    pub fn get_score(env: Env, base: Address, quote: Address) -> Result<u32, Error> {
         let score = Self::get_inner_score(env, base, quote)?;
         Ok(score.get())
     }

@@ -11,7 +11,7 @@
 ##
 ## EXAMPLE
 ##
-##   ./invoke alice get_score --base CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75 --quote CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWM
+##   ./invoke alice get_score --base CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA --quote CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC
 
 contract_name="stellar_oracle_shield"
 
@@ -28,7 +28,7 @@ if [ -z $source_account ]; then
     cat $0 | grep "^##" | sed -e "s/^##//"
     exit
 fi
-source_address=$(stellar keys address ${source_account})
+source_address=$(stellar keys public-key ${source_account})
 shift
 
 echo "${source_account}[${source_address}] invoke ${contract_name}"

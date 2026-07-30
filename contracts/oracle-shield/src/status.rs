@@ -14,8 +14,8 @@ pub enum Status {
 
 impl From<Score> for Status {
     fn from(score: Score) -> Status {
-        const HEALTHY_THRESHOLD: i32 = 66;
-        const DEGRADED_THRESHOLD: i32 = 33;
+        const HEALTHY_THRESHOLD: u32 = 66;
+        const DEGRADED_THRESHOLD: u32 = 33;
         let score = score.get();
         if score >= HEALTHY_THRESHOLD {
             Self::Healthy

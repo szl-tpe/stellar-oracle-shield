@@ -6,13 +6,13 @@ use soroban_sdk::contracterror;
 #[repr(u32)]
 pub enum Error {
     /// admin is not set - unlikely
-    MissingAdmin = 1,
+    MissingAdmin = 701,
     /// score set is out of bounds
-    ScoreBounds = 2,
+    ScoreBounds = 702,
     /// pair is not covered
-    PairNotCovered = 3,
+    PairNotCovered = 703,
     /// input feed is stale
-    StaleInput = 4,
+    StaleInput = 704,
     /// conversion error - unlikely
-    ConversionError = 5,
+    ConversionError = 705,
 }
