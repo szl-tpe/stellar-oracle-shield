@@ -216,7 +216,7 @@ fn test_event() {
             &env,
             (
                 contract_id,
-                (Symbol::new(&env, "HEALTH_CHANGED"), base, quote).into_val(&env),
+                (Symbol::new(&env, "status_change"), base, quote).into_val(&env),
                 Status::Healthy.into_val(&env)
             )
         ]
