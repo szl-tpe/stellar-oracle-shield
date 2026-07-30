@@ -11,7 +11,7 @@ contractmeta!(key = "Description", val = "sunzu lab oracle shield");
 #[contracttype]
 enum DataKey {
     Admin,
-    TTL,
+    MaxStaleness,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -26,13 +26,13 @@ pub struct Contract;
 impl Contract {
     /// initialze contract
     /// set administator address
-    pub fn __constructor(env: Env, admin: Address, ttl: Option<u64>) {
-        const DEFAULT_TTL: u64 = 3600;
+    pub fn __constructor(env: Env, admin: Address, max_staleness: Option<u64>) {
+        const DEFAULT_MAX_STALENESS: u64 = 3600;
         admin.require_auth();
         env.storage().instance().set(&DataKey::Admin, &admin);
         env.storage()
             .instance()
-            .set(&DataKey::TTL, &ttl.unwrap_or(DEFAULT_TTL));
+            .set(&DataKey::MaxStaleness, &max_staleness.unwrap_or(DEFAULT_MAX_STALENESS));
     }
 
     /// set ttl for a pairs score
@@ -42,7 +42,7 @@ impl Contract {
     pub fn set_ttl(env: Env, ttl: u64) -> Result<(), Error> {
         let admin = Self::get_admin(&env).ok_or(Error::MissingAdmin)?;
         admin.require_auth();
-        env.storage().instance().set(&DataKey::TTL, &ttl);
+        env.storage().instance().set(&DataKey::MaxStaleness, &ttl);
         Ok(())
     }
 
@@ -84,11 +84,9 @@ impl Contract {
             .get(&pair)
             .ok_or(Error::PairNotCovered)
             .and_then(|score: Score| {
-                let ttl: Option<u64> = env.storage().instance().get(&DataKey::TTL);
-                if let Some(ttl) = ttl {
-                    if env.ledger().timestamp() - score.ts > ttl {
-                        return Err(Error::StaleInput);
-                    }
+                let max_staleness = env.storage().instance().get(&DataKey::MaxStaleness).ok_or(Error::NoMaxStalenessSet)?;
+                if env.ledger().timestamp() - score.ts > max_staleness {
+                    return Err(Error::StaleInput);
                 }
                 Ok(score)
             })
@@ -104,7 +102,7 @@ impl Contract {
     /// - input for pair is stale (unreliable score)
     pub fn get_score(env: Env, base: Address, quote: Address) -> Result<u32, Error> {
         let score = Self::get_inner_score(&env, &Pair(base, quote))?;
-        Ok(score.get())
+        Ok(score.score)
     }
 
     /// get health status of a pair

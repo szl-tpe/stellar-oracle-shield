@@ -14,8 +14,8 @@ impl Score {
     const MAX_SCORE: u32 = 100;
 
     pub fn new(score: u32, ts: u64) -> Result<Self, Error> {
-        if (Self::MIN_SCORE..=Self::MAX_SCORE).contains(&score) {
-            Ok(Self { score, ts })
+        if score <= Self::MAX_SCORE {
+            Ok(Self{score, ts})
         } else {
             Err(Error::ScoreBounds)
         }
