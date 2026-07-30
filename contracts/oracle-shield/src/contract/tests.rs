@@ -230,18 +230,18 @@ fn test_ttl() {
     let contract_id = client.address.clone();
 
     let val: Option<u64> =
-        env.as_contract(&contract_id, || env.storage().instance().get(&DataKey::TTL));
+        env.as_contract(&contract_id, || env.storage().instance().get(&DataKey::MaxStaleness));
     assert_eq!(val, Some(60_u64));
 
     client.set_ttl(&300_u64);
     let val: Option<u64> =
-        env.as_contract(&contract_id, || env.storage().instance().get(&DataKey::TTL));
+        env.as_contract(&contract_id, || env.storage().instance().get(&DataKey::MaxStaleness));
     assert_eq!(val, Some(300_u64));
 
     let base = usdc_circle_address(&env);
     let quote = xlm_address(&env);
 
-    client.set_score(&base, &quote, &12_i32);
+    client.set_score(&base, &quote, &12_u32);
     assert_eq!(client.get_score(&base, &quote), 12);
 
     env.ledger().with_mut(|ledger| {
@@ -260,6 +260,6 @@ fn test_ttl() {
     env.ledger().with_mut(|ledger| {
         ledger.timestamp += 2;
     });
-    client.set_score(&base, &quote, &12_i32);
+    client.set_score(&base, &quote, &12_u32);
     assert_eq!(client.get_score(&base, &quote), 12);
 }
