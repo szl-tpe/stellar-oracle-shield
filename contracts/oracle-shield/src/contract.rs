@@ -1,7 +1,7 @@
 use {
     crate::{error::Error, score::Score, status::Status},
     soroban_sdk::{
-        contract, contractevent, contractimpl, contractmeta, contracttype, Address, Env,
+        Address, Env, contract, contractevent, contractimpl, contractmeta, contracttype,
     },
 };
 
@@ -96,10 +96,7 @@ impl Contract {
     }
 }
 
-#[contractevent(
-    topics = ["HEALTH_CHANGED"],
-    data_format = "single-value"
-)]
+#[contractevent(data_format = "single-value")]
 pub struct StatusChange {
     #[topic]
     pub base: Address,

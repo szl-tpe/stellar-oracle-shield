@@ -5,7 +5,7 @@ use {
     soroban_sdk::testutils::{
         Address as AddressTrait, AuthorizedFunction, AuthorizedInvocation, Events,
     },
-    soroban_sdk::{events::Event, vec, Env, IntoVal, Symbol, Val, Vec},
+    soroban_sdk::{Env, IntoVal, Symbol, Val, Vec, events::Event, vec},
 };
 
 fn contract_auth_for(
@@ -179,23 +179,25 @@ fn test_event() {
     let base = usdc_circle_address(&env);
     let quote = xlm_address(&env);
 
-    client.set_score(&base, &quote, &0_i32);
-    assert!(env
-        .events()
-        .all()
-        .filter_by_contract(&contract_id)
-        .events()
-        .is_empty());
+    client.set_score(&base, &quote, &0_u32);
+    assert!(
+        env.events()
+            .all()
+            .filter_by_contract(&contract_id)
+            .events()
+            .is_empty()
+    );
 
-    client.set_score(&base, &quote, &10_i32);
-    assert!(env
-        .events()
-        .all()
-        .filter_by_contract(&contract_id)
-        .events()
-        .is_empty());
+    client.set_score(&base, &quote, &10_u32);
+    assert!(
+        env.events()
+            .all()
+            .filter_by_contract(&contract_id)
+            .events()
+            .is_empty()
+    );
 
-    client.set_score(&base, &quote, &44_i32);
+    client.set_score(&base, &quote, &44_u32);
     let event = env.events().all().filter_by_contract(&contract_id);
     let expected = StatusChange {
         base: base.clone(),
@@ -205,7 +207,7 @@ fn test_event() {
 
     assert_eq!(event.events(), &[expected.to_xdr(&env, &contract_id)]);
 
-    client.set_score(&base, &quote, &66_i32);
+    client.set_score(&base, &quote, &66_u32);
     let event = env.events().all();
 
     assert_eq!(
