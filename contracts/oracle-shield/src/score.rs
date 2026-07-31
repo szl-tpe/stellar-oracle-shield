@@ -15,7 +15,7 @@ impl Score {
 
     pub fn new(score: u32, ts: u64) -> Result<Self, Error> {
         if score <= Self::MAX_SCORE {
-            Ok(Self{score, ts})
+            Ok(Self { score, ts })
         } else {
             Err(Error::ScoreBounds)
         }

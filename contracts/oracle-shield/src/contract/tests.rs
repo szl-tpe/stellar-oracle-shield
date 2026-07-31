@@ -222,20 +222,22 @@ fn test_event() {
 }
 
 #[test]
-fn test_ttl() {
+fn test_max_staleness() {
     let env = Env::default();
     env.mock_all_auths();
 
     let client = c_client(&env);
     let contract_id = client.address.clone();
 
-    let val: Option<u64> =
-        env.as_contract(&contract_id, || env.storage().instance().get(&DataKey::MaxStaleness));
+    let val: Option<u64> = env.as_contract(&contract_id, || {
+        env.storage().instance().get(&DataKey::MaxStaleness)
+    });
     assert_eq!(val, Some(60_u64));
 
-    client.set_ttl(&300_u64);
-    let val: Option<u64> =
-        env.as_contract(&contract_id, || env.storage().instance().get(&DataKey::MaxStaleness));
+    client.set_max_staleness(&300_u64);
+    let val: Option<u64> = env.as_contract(&contract_id, || {
+        env.storage().instance().get(&DataKey::MaxStaleness)
+    });
     assert_eq!(val, Some(300_u64));
 
     let base = usdc_circle_address(&env);

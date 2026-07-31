@@ -27,22 +27,25 @@ impl Contract {
     /// initialze contract
     /// set administator address
     pub fn __constructor(env: Env, admin: Address, max_staleness: Option<u64>) {
-        const DEFAULT_MAX_STALENESS: u64 = 3600;
+        const DEFAULT_MAX_STALENESS_SECONDS: u64 = 3600;
         admin.require_auth();
         env.storage().instance().set(&DataKey::Admin, &admin);
-        env.storage()
-            .instance()
-            .set(&DataKey::MaxStaleness, &max_staleness.unwrap_or(DEFAULT_MAX_STALENESS));
+        env.storage().instance().set(
+            &DataKey::MaxStaleness,
+            &max_staleness.unwrap_or(DEFAULT_MAX_STALENESS_SECONDS),
+        );
     }
 
-    /// set ttl for a pairs score
-    /// `ttl` - u64 seconds
+    /// set max staleness for a pairs score
+    /// `max staleness` - u64 seconds
     ///
     /// restricted to admin
-    pub fn set_ttl(env: Env, ttl: u64) -> Result<(), Error> {
+    pub fn set_max_staleness(env: Env, max_staleness: u64) -> Result<(), Error> {
         let admin = Self::get_admin(&env).ok_or(Error::MissingAdmin)?;
         admin.require_auth();
-        env.storage().instance().set(&DataKey::MaxStaleness, &ttl);
+        env.storage()
+            .instance()
+            .set(&DataKey::MaxStaleness, &max_staleness);
         Ok(())
     }
 
@@ -84,7 +87,11 @@ impl Contract {
             .get(&pair)
             .ok_or(Error::PairNotCovered)
             .and_then(|score: Score| {
-                let max_staleness = env.storage().instance().get(&DataKey::MaxStaleness).ok_or(Error::NoMaxStalenessSet)?;
+                let max_staleness = env
+                    .storage()
+                    .instance()
+                    .get(&DataKey::MaxStaleness)
+                    .ok_or(Error::NoMaxStalenessSet)?;
                 if env.ledger().timestamp() - score.ts > max_staleness {
                     return Err(Error::StaleInput);
                 }
