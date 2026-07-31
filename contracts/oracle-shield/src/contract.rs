@@ -36,7 +36,7 @@ impl Contract {
         );
     }
 
-    /// set max staleness for a pairs score
+    /// set max staleness for all pairs score
     /// `max staleness` - u64 seconds
     ///
     /// restricted to admin
