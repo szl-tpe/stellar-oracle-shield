@@ -1,6 +1,6 @@
 use {
-    crate::{error::Error, status::Status},
     soroban_sdk::{Env, IntoVal, TryFromVal, Val},
+    stellar_oracle_shield_client::{Error, Status},
 };
 
 /// u32 with range check
@@ -38,5 +38,20 @@ impl TryFromVal<Env, Val> for Score {
 impl IntoVal<Env, Val> for Score {
     fn into_val(&self, e: &Env) -> Val {
         (self.score, self.ts).into_val(e)
+    }
+}
+
+impl From<Score> for Status {
+    fn from(score: Score) -> Status {
+        const HEALTHY_THRESHOLD: u32 = 66;
+        const DEGRADED_THRESHOLD: u32 = 33;
+        let score = score.score;
+        if score >= HEALTHY_THRESHOLD {
+            Self::Healthy
+        } else if score >= DEGRADED_THRESHOLD {
+            Self::Degraded
+        } else {
+            Self::Unsafe
+        }
     }
 }

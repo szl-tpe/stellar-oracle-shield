@@ -1,8 +1,9 @@
 use {
-    crate::{error::Error, score::Score, status::Status},
+    crate::score::Score,
     soroban_sdk::{
         Address, BytesN, Env, contract, contractevent, contractimpl, contractmeta, contracttype,
     },
+    stellar_oracle_shield_client::{Error, Status},
 };
 
 contractmeta!(key = "Description", val = "sunzu lab oracle shield");
@@ -39,7 +40,7 @@ impl Contract {
     /// retrieve version of the contract
     ///
     /// return the version
-    pub fn version() -> u32 {
+    fn version() -> u32 {
         1
     }
 
@@ -47,7 +48,7 @@ impl Contract {
     /// `max staleness` - u64 seconds
     ///
     /// restricted to admin
-    pub fn set_max_staleness(env: Env, max_staleness: u64) -> Result<(), Error> {
+    fn set_max_staleness(env: Env, max_staleness: u64) -> Result<(), Error> {
         let admin = Self::get_admin(&env).ok_or(Error::MissingAdmin)?;
         admin.require_auth();
         env.storage()
@@ -66,7 +67,7 @@ impl Contract {
     /// `score` - [0-100] scoring. 0 the more unsafe, 100 the healthier
     ///
     /// restricted to admin
-    pub fn set_score(env: Env, base: Address, quote: Address, score: u32) -> Result<(), Error> {
+    fn set_score(env: Env, base: Address, quote: Address, score: u32) -> Result<(), Error> {
         let admin = Self::get_admin(&env).ok_or(Error::MissingAdmin)?;
         admin.require_auth();
 
@@ -114,7 +115,7 @@ impl Contract {
     /// fails if
     /// - pair is not covered
     /// - input for pair is stale (unreliable score)
-    pub fn get_score(env: Env, base: Address, quote: Address) -> Result<u32, Error> {
+    fn get_score(env: Env, base: Address, quote: Address) -> Result<u32, Error> {
         let score = Self::get_inner_score(&env, &Pair(base, quote))?;
         Ok(score.score)
     }
@@ -127,7 +128,7 @@ impl Contract {
     /// fails if
     /// - pair is not covered
     /// - input for pair is stale (unreliable score)
-    pub fn get_status(env: Env, base: Address, quote: Address) -> Result<Status, Error> {
+    fn get_status(env: Env, base: Address, quote: Address) -> Result<Status, Error> {
         let score = Self::get_inner_score(&env, &Pair(base, quote))?;
         Ok(score.into())
     }
@@ -151,6 +152,29 @@ pub struct StatusChange {
     #[topic]
     pub quote: Address,
     pub status: Status,
+}
+
+#[contractimpl]
+impl stellar_oracle_shield_client::Contract for Contract {
+    fn set_max_staleness(env: Env, max_staleness: u64) -> Result<(), Error> {
+        Contract::set_max_staleness(env, max_staleness)
+    }
+
+    fn set_score(env: Env, base: Address, quote: Address, score: u32) -> Result<(), Error> {
+        Contract::set_score(env, base, quote, score)
+    }
+
+    fn get_score(env: Env, base: Address, quote: Address) -> Result<u32, Error> {
+        Contract::get_score(env, base, quote)
+    }
+
+    fn get_status(env: Env, base: Address, quote: Address) -> Result<Status, Error> {
+        Contract::get_status(env, base, quote)
+    }
+
+    fn version() -> u32 {
+        Contract::version()
+    }
 }
 
 mod tests;

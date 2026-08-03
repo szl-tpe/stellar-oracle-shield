@@ -1553,6 +1553,23 @@ name = "stellar-oracle-shield"
 version = "0.1.0"
 dependencies = [
  "soroban-sdk",
+ "stellar-oracle-shield-client",
+]
+
+[[package]]
+name = "stellar-oracle-shield-client"
+version = "0.1.0"
+dependencies = [
+ "soroban-sdk",
+]
+
+[[package]]
+name = "stellar-oracle-shield-client-example"
+version = "0.1.0"
+dependencies = [
+ "soroban-sdk",
+ "stellar-oracle-shield",
+ "stellar-oracle-shield-client",
 ]
 
 [[package]]
