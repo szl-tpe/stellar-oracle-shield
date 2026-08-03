@@ -1,21 +1,20 @@
 [package]
-name = "stellar-oracle-shield"
-description = "Stellar Oracle Shield Contract"
+name = "stellar-oracle-shield-client"
+description = "Stellar Oracle Shield Client"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 homepage.workspace = true
 repository.workspace = true
-publish = false
+readme = "README.md"
 
 [lib]
-crate-type = ["lib", "cdylib"]
+crate-type = ["lib"]
 doctest = false
 
 [dependencies]
 soroban-sdk = { workspace = true }
-stellar-oracle-shield-client = { workspace = true }
 
 [dev-dependencies]
 soroban-sdk = { workspace = true, features = ["testutils"] }

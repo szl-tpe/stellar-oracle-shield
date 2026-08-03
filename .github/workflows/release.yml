@@ -36,10 +36,10 @@ jobs:
         run: |
           VERSION="${REF_NAME}"
           VERSION="${VERSION#v}"
-          CRATE_VERSION=$(grep -m1 '^version = ' contracts/oracle-shield/Cargo.toml | sed 's/.*"\(.*\)".*/\1/')
+          CRATE_VERSION=$(grep -m1 '^version = ' Cargo.toml | sed 's/.*"\(.*\)".*/\1/')
           # The released binary and the crate must claim the same version.
           if [ "${VERSION}" != "${CRATE_VERSION}" ]; then
-            echo "::error::Tag v${VERSION} does not match the crate version (${CRATE_VERSION} in contracts/oracle-shield/Cargo.toml). Align them before tagging."
+            echo "::error::Tag v${VERSION} does not match the crate version (${CRATE_VERSION} in Cargo.toml). Align them before tagging."
             exit 1
           fi
           echo "WASM=${PACKAGE}_v${VERSION}.wasm" >> "$GITHUB_ENV"
@@ -119,6 +119,15 @@ jobs:
                -d "$JSON_OBJECT" \
                --max-time 15
 
+  # publish the rust contract client crate
+  rust-sdk:
+    needs: release
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/rust-sdk.yml
+
+  # publish the typescript sdk
   typescript-sdk:
     needs: release
     permissions:

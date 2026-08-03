@@ -1,0 +1,24 @@
+[package]
+name = "stellar-oracle-shield-client-example"
+description = "Stellar Oracle Shield - Client Example"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+homepage.workspace = true
+repository.workspace = true
+publish = false
+
+[lib]
+crate-type = ["lib", "cdylib"]
+doctest = false
+
+[dependencies]
+soroban-sdk = { version = "26" }
+# for your own contracts, use officially published crate
+stellar-oracle-shield-client  = { workspace = true }
+
+
+[dev-dependencies]
+soroban-sdk = { version = "26", features = ["testutils"] }
+stellar-oracle-shield  = { workspace = true }
