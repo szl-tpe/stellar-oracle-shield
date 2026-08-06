@@ -1,8 +1,8 @@
 //! Oracle Shield contract interface
 //!
-//! # client side usage example
+//! # client side example
 //! ```
-//! /// oracle shield main contract
+//! /// oracle shield client contract
 //! #[contract]
 //! pub struct ClientContract;
 
