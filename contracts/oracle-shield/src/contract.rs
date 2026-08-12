@@ -1,11 +1,14 @@
 use {
     crate::{error::Error, score::Score, status::Status},
     soroban_sdk::{
-        Address, Env, contract, contractevent, contractimpl, contractmeta, contracttype,
+        Address, BytesN, Env, contract, contractevent, contractimpl, contractmeta, contracttype,
     },
 };
 
-contractmeta!(key = "Description", val = "sunzu lab oracle shield");
+contractmeta!(key = "name", val = env!("CARGO_PKG_NAME"));
+contractmeta!(key = "version", val = env!("CARGO_PKG_VERSION"));
+contractmeta!(key = "description", val = env!("CARGO_PKG_DESCRIPTION"));
+contractmeta!(key = "license", val = env!("CARGO_PKG_LICENSE"));
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[contracttype]
@@ -22,6 +25,12 @@ pub struct Pair(Address, Address);
 #[contract]
 pub struct Contract;
 
+const VERSION: (u32, u32, u32) = (
+    parse_version(env!("CARGO_PKG_VERSION_MAJOR")),
+    parse_version(env!("CARGO_PKG_VERSION_MINOR")),
+    parse_version(env!("CARGO_PKG_VERSION_PATCH")),
+);
+
 #[contractimpl]
 impl Contract {
     /// initialze contract
@@ -34,6 +43,13 @@ impl Contract {
             &DataKey::MaxStaleness,
             &max_staleness.unwrap_or(DEFAULT_MAX_STALENESS_SECONDS),
         );
+    }
+
+    /// retrieve version of the contract
+    ///
+    /// return the version
+    pub fn version() -> (u32, u32, u32) {
+        VERSION
     }
 
     /// set max staleness for all pairs score
@@ -124,6 +140,17 @@ impl Contract {
         let score = Self::get_inner_score(&env, &Pair(base, quote))?;
         Ok(score.into())
     }
+
+    /// upgrade the contract with the new one
+    /// `new_wasm_hash` - hash of the new wasm
+    ///
+    /// restricted to admin
+    pub fn upgrade(env: Env, new_wasm_hash: BytesN<32>) {
+        let admin: Address = env.storage().instance().get(&DataKey::Admin).unwrap();
+        admin.require_auth();
+
+        env.deployer().update_current_contract_wasm(new_wasm_hash);
+    }
 }
 
 #[contractevent(data_format = "single-value")]
@@ -133,6 +160,13 @@ pub struct StatusChange {
     #[topic]
     pub quote: Address,
     pub status: Status,
+}
+
+const fn parse_version(s: &str) -> u32 {
+    match u32::from_str_radix(s, 10) {
+        Ok(v) => v,
+        Err(_) => panic!("invalid version number"),
+    }
 }
 
 mod tests;
