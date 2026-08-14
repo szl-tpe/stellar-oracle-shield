@@ -15,6 +15,7 @@ contractmeta!(key = "license", val = env!("CARGO_PKG_LICENSE"));
 #[contracttype]
 enum DataKey {
     Admin,
+    Operator,
     MaxStaleness,
 }
 
@@ -36,7 +37,12 @@ const VERSION: (u32, u32, u32) = (
 impl Contract {
     /// initialze contract
     /// set administator address
-    pub fn __constructor(env: Env, admin: Address, max_staleness: Option<u64>) {
+    pub fn __constructor(
+        env: Env,
+        admin: Address,
+        max_staleness: Option<u64>,
+        operator_key: Option<Address>,
+    ) {
         const DEFAULT_MAX_STALENESS_SECONDS: u64 = 3600;
         admin.require_auth();
         env.storage().instance().set(&DataKey::Admin, &admin);
@@ -44,6 +50,11 @@ impl Contract {
             &DataKey::MaxStaleness,
             &max_staleness.unwrap_or(DEFAULT_MAX_STALENESS_SECONDS),
         );
+        if let Some(operator_key) = operator_key {
+            env.storage()
+                .instance()
+                .set(&DataKey::Operator, &operator_key)
+        }
     }
 
     /// retrieve version of the contract
@@ -58,7 +69,7 @@ impl Contract {
     ///
     /// restricted to admin
     fn set_max_staleness(env: Env, max_staleness: u64) -> Result<(), Error> {
-        let admin = Self::get_admin(&env).ok_or(Error::MissingAdmin)?;
+        let admin = Self::get_admin(&env)?;
         admin.require_auth();
         env.storage()
             .instance()
@@ -66,8 +77,31 @@ impl Contract {
         Ok(())
     }
 
-    fn get_admin(env: &Env) -> Option<Address> {
-        env.storage().instance().get(&DataKey::Admin)
+    /// set operator address
+    /// `operator_key` - Address
+    ///
+    /// restricted to admin
+    fn set_operator_key(env: Env, operator_key: Address) -> Result<(), Error> {
+        let admin = Self::get_admin(&env)?;
+        admin.require_auth();
+        env.storage()
+            .instance()
+            .set(&DataKey::Operator, &operator_key);
+        Ok(())
+    }
+
+    fn get_admin(env: &Env) -> Result<Address, Error> {
+        env.storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .ok_or(Error::MissingAdmin)
+    }
+
+    fn get_operator(env: &Env) -> Result<Address, Error> {
+        env.storage()
+            .instance()
+            .get(&DataKey::Operator)
+            .ok_or(Error::MissingOperator)
     }
 
     /// set score of a pair
@@ -75,10 +109,10 @@ impl Contract {
     /// `quote` - SAC address of an asset
     /// `score` - [0-100] scoring. 0 the more unsafe, 100 the healthier
     ///
-    /// restricted to admin
+    /// restricted to operator
     fn set_score(env: Env, base: Address, quote: Address, score: u32) -> Result<(), Error> {
-        let admin = Self::get_admin(&env).ok_or(Error::MissingAdmin)?;
-        admin.require_auth();
+        let operator = Self::get_operator(&env)?;
+        operator.require_auth();
 
         let pair = Pair(base, quote);
         let old_score = Self::get_inner_score(&env, &pair);
@@ -174,6 +208,10 @@ const fn parse_version(s: &str) -> u32 {
 impl stellar_oracle_shield_client::Contract for Contract {
     fn set_max_staleness(env: Env, max_staleness: u64) -> Result<(), Error> {
         Contract::set_max_staleness(env, max_staleness)
+    }
+
+    fn set_operator_key(env: Env, operator_key: Address) -> Result<(), Error> {
+        Contract::set_operator_key(env, operator_key)
     }
 
     fn set_score(env: Env, base: Address, quote: Address, score: u32) -> Result<(), Error> {

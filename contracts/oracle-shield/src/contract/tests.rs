@@ -30,7 +30,8 @@ fn contract_auth_for(
 
 fn c_client(env: &Env) -> ContractClient<'_> {
     let admin_address = Address::generate(&env);
-    let constructor_args = (&admin_address, 60_u64);
+    let operator_address = Address::generate(&env);
+    let constructor_args = (&admin_address, 60_u64, Some(operator_address));
     let contract_id = env.register(Contract, constructor_args.clone());
 
     ContractClient::new(&env, &contract_id)
@@ -56,7 +57,8 @@ fn test_constructor() {
     env.mock_all_auths();
 
     let admin_address = Address::generate(&env);
-    let constructor_args = (&admin_address, 60_u64);
+    let operator_address = Address::generate(&env);
+    let constructor_args = (&admin_address, 60_u64, Some(&operator_address));
     let contract_id = env.register(Contract, constructor_args.clone());
     assert_eq!(
         env.auths(),
@@ -76,7 +78,8 @@ fn test_set_score() {
     env.mock_all_auths();
 
     let admin_address = Address::generate(&env);
-    let constructor_args = (&admin_address, 60_u64);
+    let operator_address = Address::generate(&env);
+    let constructor_args = (&admin_address, 60_u64, Some(&operator_address));
 
     let contract_id = env.register(Contract, constructor_args.clone());
 
@@ -89,16 +92,61 @@ fn test_set_score() {
         env.auths(),
         [contract_auth_for(
             &env,
-            admin_address.clone(),
+            operator_address.clone(),
             contract_id.clone(),
             "set_score",
             (base.clone(), quote.clone(), 12_u32,)
         )]
     );
+
     assert_eq!(client.get_score(&base, &quote), 12);
 
     let ret = client.try_set_score(&base, &quote, &12345678_u32);
     assert_eq!(ret, Err(Ok(Error::ScoreBounds)));
+}
+
+#[test]
+fn test_set_operator() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin_address = Address::generate(&env);
+    let operator_address = Address::generate(&env);
+    let constructor_args: (&Address, u64, Option<Address>) = (&admin_address, 60_u64, None);
+
+    let contract_id = env.register(Contract, constructor_args.clone());
+    let client = ContractClient::new(&env, &contract_id);
+    let base = usdc_circle_address(&env);
+    let quote = xlm_address(&env);
+
+    assert!(client.try_set_score(&base, &quote, &12_u32).is_err());
+
+    assert_eq!(env.auths(), []);
+
+    client.set_operator_key(&operator_address);
+
+    assert_eq!(
+        env.auths(),
+        [contract_auth_for(
+            &env,
+            admin_address.clone(),
+            contract_id.clone(),
+            "set_operator_key",
+            (operator_address.clone(),)
+        )]
+    );
+    assert!(client.try_set_score(&base, &quote, &12_u32).is_ok());
+
+    assert_eq!(
+        env.auths(),
+        [contract_auth_for(
+            &env,
+            operator_address.clone(),
+            contract_id.clone(),
+            "set_score",
+            (&base, &quote, &12_u32,)
+        )]
+    );
 }
 
 #[test]

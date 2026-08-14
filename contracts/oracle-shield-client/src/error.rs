@@ -17,4 +17,6 @@ pub enum Error {
     ConversionError = 705,
     /// max staleness not set (shouldn't happen)
     NoMaxStalenessSet = 706,
+    /// operator key is not set
+    MissingOperator = 707,
 }

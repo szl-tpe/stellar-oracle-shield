@@ -12,6 +12,12 @@ pub trait Contract {
     /// restricted to admin
     fn set_max_staleness(env: Env, max_staleness: u64) -> Result<(), Error>;
 
+    /// set operator address
+    /// `operator_key` - Address
+    ///
+    /// restricted to admin
+    fn set_operator_key(env: Env, operator_key: Address) -> Result<(), Error>;
+
     /// set score of a pair
     /// `base` - SAC address of an asset
     /// `quote` - SAC address of an asset

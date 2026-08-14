@@ -16,7 +16,7 @@ fn usdc_circle_address(env: &Env) -> Address {
 
 fn shield_contract_client(env: &Env) -> (Address, stellar_oracle_shield::ContractClient<'_>) {
     let admin_address = Address::generate(&env);
-    let constructor_args = (&admin_address, 60_u64);
+    let constructor_args = (&admin_address, 60_u64, Some(&admin_address));
     let contract_id = env.register(stellar_oracle_shield::Contract, constructor_args.clone());
 
     (
