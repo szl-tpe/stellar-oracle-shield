@@ -3,9 +3,13 @@
 TAG=latest
 LISTEN_ADDRESS=127.0.0.1:8000
 NAME=stellar-local
+NETWORK=stellar-oracle-shield-simulator-net
+
+docker network create ${NETWORK}
 
 docker run --rm -d \
        --name ${NAME} \
+       --network ${NETWORK} \
        -p ${LISTEN_ADDRESS}:8000 \
        stellar/quickstart:${TAG} \
        --local

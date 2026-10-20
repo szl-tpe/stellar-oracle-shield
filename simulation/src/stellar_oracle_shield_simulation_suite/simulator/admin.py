@@ -13,7 +13,7 @@ class Admin:
         self.account = account
         self.client = client
 
-    def add_operator(self, ope: Operator):
+    def add_operator(self, ope: Operator | Keypair):
         """add authorized operator"""
         operator: Address | str = ope.public_key
         muxed_account = MuxedAccount(self.account.public_key)

@@ -1,5 +1,7 @@
 #!/bin/bash
 
 NAME=stellar-local
+NETWORK=stellar-oracle-shield-simulator-net
 
 docker stop ${NAME}
+docker network rm ${NETWORK}

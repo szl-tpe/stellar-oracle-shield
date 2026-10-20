@@ -7,3 +7,8 @@ simulator:
 
   contract:
     wasm_path: "../target/wasm32v1-none/release/stellar_oracle_shield.wasm"
+
+  scorer:
+    host: "localhost"
+    port: 8696
+    public_key: "GC75T2HDPBHSRQJO27ZMSUNVZX6JCNDK777QHEC4I3L2XRCPFYGA4OQ6"
