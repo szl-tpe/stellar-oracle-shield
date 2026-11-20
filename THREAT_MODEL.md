@@ -8,13 +8,13 @@ This model covers the contract in this repository, its deployment and upgrade pa
 
 Security objectives are:
 
-- Only the configured operator can publish scores, and only the administrator can change security-critical configuration or upgrade the contract.
+- Only the configured operators can publish scores, and only the administrator can change security-critical configuration or upgrade the contract.
 - A returned score/status is authentic, in range, associated with the requested ordered pair, and sufficiently recent.
 - Consumers can distinguish healthy, degraded, unsafe, missing, and stale inputs and fail closed where appropriate.
-- Administrative, operator, publication, and upgrade actions are attributable and observable.
+- Administrative, operator, and upgrade actions are attributable and observable.
 - The service remains available within reasonable adversarial and upstream-failure conditions.
 
-Primary assets are the administrator and operator signing keys, monitoring inputs and scoring logic, contract WASM and configuration, per-pair scores and timestamps, contract identity/network configuration and emitted events.
+Primary assets are the administrator and operators signing keys, monitoring inputs and scoring logic, contract WASM and configuration, per-pair scores and timestamps, contract identity/network configuration and emitted events.
 
 ## 1. Dataflow diagram
 
@@ -25,14 +25,14 @@ flowchart TB
   end
 
   subgraph O["Shield operator boundary (off-chain; not in repository)"]
-    RM["Risk monitor and scoring engine"]
+    RM["Scoring engine"]
     OK["Operator signer / key custody"]
     OL[("Logs, observations, model/config history")]
   end
 
   subgraph S["Stellar network / Soroban boundary"]
     SC["Oracle Shield contract"]
-    CS[("Instance storage: admin, operator, max staleness")]
+    CS[("Instance storage: admin, operators, parameters")]
     PS[("Temporary storage: pair score and timestamp")]
     EV[("Contract events / ledger history")]
     CP["Consuming DeFi protocol"]
@@ -47,11 +47,11 @@ flowchart TB
   RM -->|"score proposal"| OK
   RM -->|"inputs, computation, alerts"| OL
   OK -->|"authorized set_score transaction"| SC
-  AD -->|"set operator, set staleness, upgrade"| SC
+  AD -->|"set operators, set parameters, upgrade"| SC
   CI -->|"WASM hash approved by administrator"| SC
   SC <--> CS
   SC <--> PS
-  SC -->|"StatusChange"| EV
+  SC -->|"status, score, parameters, operators, wasm change"| EV
   CP -->|"get_status or get_score"| SC
   SC -->|"status/score or explicit error"| CP
 ```
@@ -59,8 +59,8 @@ flowchart TB
 Trust boundaries and important flows:
 
 1. External data crosses into the off-chain monitor and must be treated as adversarial.
-2. The operator signer converts an off-chain conclusion into an authenticated on-chain update.
-3. The administrator can replace the operator, alter freshness policy, and replace all contract code; it is the highest-impact role.
+2. The operator signers converts an off-chain conclusion into an authenticated on-chain update.
+3. The administrator can add an revoke operators, alter parameters (freshness policy, quorum...) and replace all contract code; it is the highest-impact role.
 4. Contract state and events inherit Stellar ledger integrity, but temporary entries have a finite lifetime and require lifecycle management.
 5. A consumer crosses a separate integration boundary: Shield recommends a state, while the consumer implements the actual circuit breaker.
 
@@ -81,25 +81,25 @@ Status values below use **Implemented** for controls visible in this repository,
 
 | Threat | Answers / treatments | Status |
 |---|---|---|
-| Spoof.1 | **Spoof.1.R.1** — Keep `operator.require_auth()` on every score write and add regression tests for unauthorized callers.<br>**Spoof.1.R.2** — Use a dedicated, least-privilege operator account. At minimum, store its key in a root- or service-account-owned file with mode 0600, outside application configuration, source control, backups, diagnostics, and CI; restrict host and process access and maintain a key-rotation procedure. For production or higher-value deployments, prefer an HSM, managed signer, or MPC-based signing system so the raw private key is not exposed to the scoring host.<br>**Spoof.1.R.3** — Monitor for operator transactions that cannot be correlated with an authorized scoring job. Maintain an independently secured and funded replacement operator account, and regularly test a documented procedure for pausing publication, rotating the operator with set_operator_key, activating the replacement signer, and verifying recovery. | R.1 Implemented<br>R.2 Partially implemented<br>R.3 Required |
-| Spoof.2 | **Spoof.2.R.1** — Preserve administrator authentication for configuration and upgrades.<br>**Spoof.2.R.2** — Put administration behind multisig/contract-account governance with separate approvers, hardware-backed keys, and an emergency recovery procedure.<br>**Spoof.2.R.3** — Alert on every administrator action and verify the expected signer and change ticket. | R.1 Implemented<br> R.2 Required<br>R.3 Required |
-| Spoof.3 | **Spoof.3.R.1** — Pin network passphrase, canonical Shield contract ID, expected `version()`, and canonical SAC addresses in each integration and deployment manifest. | Required |
-| Spoof.4 | **Spoof.4.R.1** — Combine independent providers/venues and source classes; do not allow one endpoint identity to count as multiple independent observations. | Required |
-| Tamper.1 | **Tamper.1.R.1** — Use robust multi-source aggregation, minimum liquidity/source-count rules, deviation and rate-of-change bounds, stale-input rejection, and asset-specific thresholds.<br>**Tamper.1.R.2** — Fail safe (`Unsafe` or no publication) when quorum/confidence is insufficient; never reuse a last-known-good score without clearly bounded age.<br>**Tamper.1.R.3** — Continuously compare sources and alert/quarantine outliers; adversarially test thin-market, flash-manipulation, and coordinated-source scenarios. | Required (off-chain) |
-| Tamper.2 | **Tamper.2.R.1** — Run the scoring process under a dedicated, least-privilege OS account on a hardened host. Restrict deployment and filesystem access, pin and verify dependencies, protect the operator key, and ensure only reviewed builds can run. | Required |
-| Tamper.3 | **Tamper.3.R.1** — Require reproducible builds, locked dependencies, tests/audit, and multiple approvals for the exact WASM hash before upgrade.<br>**Tamper.3.R.3** — Prefer timelocked/multisig upgrades with monitoring and a rehearsed recovery release. | Required |
-| Tamper.4 | **Tamper.4.R.1** — Emit an event containing the previous and new values for every change.<br>**Tamper.4.R.2** — Validate a new operator is intentional and usable, require two-step rotation or governance approval, and exercise a post-change publication check. | Required |
-| Repudiate.1 | **Repudiate.1.R.1** — Emit events for every score publication (including score, pair, timestamp/policy version), operator rotation, freshness change, and upgrade hash; retain transaction and ledger identifiers in an indexed audit log.<br>**Repudiate.1.R.2** — The existing `StatusChange` event remains useful but is insufficient alone because same-status score updates leave no contract event. | Partial; enhancement Required |
-| Repudiate.2 | **Repudiate.2.R.1** — Store immutable or append-only records of normalized source observations, source timestamps, scoring code/config/model version, output, signer identity, and submission transaction hash. | Required |
-| Info.1 | **Info.1.R.1** — Use hardware-backed or managed signing, secret scanning, protected environments, least-privilege CI, masked logs, and documented rotation after suspected exposure.<br>**Info.1.R.2** — Treat repository helper arguments and shell history as non-secret; never pass raw seeds through them. | Required |
-| Info.2 | **Info.2.R.1** — Accept that on-chain state/events are public; do not encode secrets in scores, pair metadata, or events. | Accepted with mitigation |
-| DoS.1 | **DoS.1.R.1** — Use diverse providers, timeouts, circuit breakers, cached observations within strict age bounds, health checks, and alerting. | Required |
-| DoS.2 | **DoS.2.R.1** — Monitor/fund the operator account, serialize sequence-number use or use channel accounts, set fee policy, retry idempotently, and alert on publication latency. | Required |
-| DoS.3 | **DoS.3.R.1** — Enforce two-person review, preflight simulation, config-change events, and alerts. | Required |
-| DoS.4 | **DoS.4.R.1** — Cap update frequency, prioritize critical pairs, batch/queue off-chain work, apply resource budgets, and load-test worst-case cardinality. | Required |
-| Elevation.1 | **Elevation.1.R.1** — Maintain negative authorization tests for every privileged function, including after every upgrade; fuzz contract inputs and review all new entry points.<br>**Elevation.1.R.2** — Keep privileged logic small and centralize role checks. | Auth checks/tests Partial; ongoing Required |
-| Elevation.2 | **Elevation.2.R.1** — Protect branches/tags, pin actions and dependencies, generate provenance/SBOM, isolate release runners, prohibit untrusted PR code from signing/deploying, and require human approval of the exact artifact hash.<br>**Elevation.2.R.2** — Separate build, upload, and admin-approval identities. | Partially implemented |
-| Elevation.3 | **Elevation.3.R.1** — Replace a single administrator key with threshold governance; use timelocks for routine changes and a narrowly scoped, transparent emergency path.<br>**Elevation.3.R.2** — Consider separating upgrader and configuration-manager roles in a future contract version. | Required |
+| Spoof.1 | **Spoof.1.R.1** — Keep `operator.require_auth()` on every score write and add regression tests for unauthorized callers.<br>**Spoof.1.R.2** — Use a dedicated, least-privilege operator account. At minimum, store its key in a root- or service-account-owned file with mode 0600, outside application configuration, source control, backups, diagnostics, and CI; restrict host and process access and maintain a key-rotation procedure. For production or higher-value deployments, prefer an HSM, managed signer, or MPC-based signing system so the raw private key is not exposed to the scoring host.<br>**Spoof.1.R.3** — Monitor for operator transactions that cannot be correlated with an authorized scoring job. Maintain an independently secured and funded replacement operator account, and regularly test a documented procedure for pausing publication, rotating the operator with set_operator_key, activating the replacement signer, and verifying recovery. | R.1 Implemented<br>R.2 Partially implemented<br>R.3 Partially implemented |
+| Spoof.2 | **Spoof.2.R.1** — Preserve administrator authentication for configuration and upgrades.<br>**Spoof.2.R.2** — Put administration behind multisig/contract-account governance with separate approvers, hardware-backed keys, and an emergency recovery procedure.<br>**Spoof.2.R.3** — Alert on every administrator action and verify the expected signer and change ticket. | R.1 Implemented<br> R.2 Required (production setup, not implementation )<br>R.3 Partially implemented |
+| Spoof.3 | **Spoof.3.R.1** — Pin network passphrase, canonical Shield contract ID, expected `version()`, and canonical SAC addresses in each integration and deployment manifest. | Implemented (README, release notes) |
+| Spoof.4 | **Spoof.4.R.1** — Combine independent providers/venues and source classes; do not allow one endpoint identity to count as multiple independent observations. | Implemented (multiscorer) |
+| Tamper.1 | **Tamper.1.R.1** — Use robust multi-source aggregation, minimum liquidity/source-count rules, deviation and rate-of-change bounds, stale-input rejection, and asset-specific thresholds.<br>**Tamper.1.R.2** — Fail safe (`Unsafe` or no publication) when quorum/confidence is insufficient; never reuse a last-known-good score without clearly bounded age.<br>**Tamper.1.R.3** — Continuously compare sources and alert/quarantine outliers; adversarially test thin-market, flash-manipulation, and coordinated-source scenarios. | R.1 Implemented (multiscorer)<br> R.2 Implemented (multiscorer)<br>R.3 Accepted |
+| Tamper.2 | **Tamper.2.R.1** — Run the scoring process under a dedicated, least-privilege OS account on a hardened host. Restrict deployment and filesystem access, pin and verify dependencies, protect the operator key, and ensure only reviewed builds can run. | Implemented |
+| Tamper.3 | **Tamper.3.R.1** — Require reproducible builds, locked dependencies, tests/audit, and multiple approvals for the exact WASM hash before upgrade.<br>**Tamper.3.R.2** — Prefer timelocked/multisig upgrades with monitoring and a rehearsed recovery release. | R.1 Implemented <br>R.2 Implemented (IT-3339) |
+| Tamper.4 | **Tamper.4.R.1** — Emit an event containing the previous and new values for every change.<br>**Tamper.4.R.2** — Validate a new operator is intentional and usable, require two-step rotation or governance approval, and exercise a post-change publication check. | R.1 Partially Implemented<br> R.2 Accepted |
+| Repudiate.1 | **Repudiate.1.R.1** — Emit events for every score publication (including score, pair, timestamp/policy version), operator rotation, freshness change, and upgrade hash; retain transaction and ledger identifiers in an indexed audit log. | Implemented |
+| Repudiate.2 | **Repudiate.2.R.1** — Store immutable or append-only records of normalized source observations, source timestamps, scoring code/config/model version, output, signer identity, and submission transaction hash. | Implemented |
+| Info.1 | **Info.1.R.1** — Use hardware-backed or managed signing, secret scanning, protected environments, least-privilege CI, masked logs, and documented rotation after suspected exposure.<br>**Info.1.R.2** — Treat repository helper arguments and shell history as non-secret; never pass raw seeds through them. | R.1 Partially Implemented<br>R.2 Implemented |
+| Info.2 | **Info.2.R.1** — Accept that on-chain state/events are public; do not encode secrets in scores, pair metadata, or events. | Accepted |
+| DoS.1 | **DoS.1.R.1** — Use diverse providers, timeouts, circuit breakers, cached observations within strict age bounds, health checks, and alerting. | Implemented |
+| DoS.2 | **DoS.2.R.1** — Monitor/fund the operator account, serialize sequence-number use or use channel accounts, set fee policy, retry idempotently, and alert on publication latency. | Accepted |
+| DoS.3 | **DoS.3.R.1** — Enforce two-person review, preflight simulation, config-change events, and alerts. | Implemented |
+| DoS.4 | **DoS.4.R.1** — Cap update frequency, prioritize critical pairs, batch/queue off-chain work, apply resource budgets, and load-test worst-case cardinality. | Partially Implemented |
+| Elevation.1 | **Elevation.1.R.1** — Maintain negative authorization tests for every privileged function, including after every upgrade; fuzz contract inputs and review all new entry points.<br>**Elevation.1.R.2** — Keep privileged logic small and centralize role checks. | R.1 Accepted (unit and simulation tests implemented but no live test)<br> R.2 Implemented |
+| Elevation.2 | **Elevation.2.R.1** — Protect branches/tags, pin actions and dependencies, generate provenance/SBOM, isolate release runners, prohibit untrusted PR code from signing/deploying, and require human approval of the exact artifact hash.<br>**Elevation.2.R.2** — Separate build, upload, and admin-approval identities. | R.1 Partially implemented<br> R.2 Accepted |
+| Elevation.3 | **Elevation.3.R.1** — Replace a single administrator key with threshold governance; use timelocks for routine changes and a narrowly scoped, transparent emergency path.<br>**Elevation.3.R.2** — Consider separating upgrader and configuration-manager roles in a future contract version. | R.1 Partially Implemented<br> R.2 Accepted |
 
 ## References
 
